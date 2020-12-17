@@ -1,4 +1,5 @@
 import Phaser from '../lib/phaser.module.js'
+import Carrot from '../game/Carrot.js'
 
 export default class Game extends Phaser.Scene {
     /** @type {Phaser.Physics.Arcade.Sprite} */
@@ -7,8 +8,13 @@ export default class Game extends Phaser.Scene {
     /** @type {Phaser.Physics.Arcade.StaticGroup} */
     platforms;
 
+    /** @type {Phaser.Physics.Arcade.Group} */
+    carrots;
+
     /** @type {Phaser.Types.Input.Keyboard.CursorKeys} */
-    cursors
+    cursors;
+
+    carrotsCollected = 0;
 
     constructor() {
         super('game');
@@ -18,6 +24,7 @@ export default class Game extends Phaser.Scene {
         this.load.image('background', 'assets/bg_layer1.png');
         this.load.image('platform', 'assets/ground_grass.png');
         this.load.image('bunny-stand', 'assets/bunny1_stand.png')
+        this.load.image('carrot', 'assets/carrot.png');
 
         this.cursors = this.input.keyboard.createCursorKeys();
     }
@@ -46,7 +53,6 @@ export default class Game extends Phaser.Scene {
         // Creating player
         this.player = this.physics.add.sprite(240, 320, 'bunny-stand').setScale(0.5);
 
-        // Physics setup
         this.physics.add.collider(this.platforms, this.player);
 
         this.player.body.checkCollision.up = false;
@@ -57,6 +63,26 @@ export default class Game extends Phaser.Scene {
         this.cameras.main.startFollow(this.player);
         this.cameras.main.setDeadzone(this.scale.width * 1.5)
 
+        // Creating Carrots
+        this.carrots = this.physics.add.group({
+            classType: Carrot
+        });
+
+        this.physics.add.collider(this.platforms, this.carrots);
+
+        this.physics.add.overlap(
+            this.player,
+            this.carrots,
+            this.handleCollectCarrot,
+            undefined,
+            this
+        );
+
+        // Carrot counting text
+        const style = { color: '#000', fontSize: 24 };
+        this.add.text(240, 10, 'Carrots: 0', style)
+            .setScrollFactor(0)
+            .setOrigin(0.5, 0)
     }
 
     update() {
@@ -70,6 +96,8 @@ export default class Game extends Phaser.Scene {
             if (platform.y >= scrollY + 700) {
                 platform.y = scrollY - Phaser.Math.Between(50, 100);
                 platform.body.updateFromGameObject();
+
+                this.addCarrotAbove(platform);
             }
         });
 
@@ -106,8 +134,46 @@ export default class Game extends Phaser.Scene {
             sprite.x = -halfWidth;
         }
     }
+
+    /**
+     * @param {Phaser.GameObjects.Sprite} sprite 
+     */
+    addCarrotAbove(sprite) {
+        const y = sprite.y - sprite.displayHeight;
+
+        /** @type {Phaser.Physics.Arcade.Sprite} */
+        const carrot = this.carrots.get(sprite.x, y, 'carrot');
+
+        carrot.setActive(true);
+        carrot.setVisible(true);
+
+        this.add.existing(carrot);
+
+        //update the physics body size
+        carrot.body.setSize(carrot.width, carrot.height);
+
+        this.physics.world.enable(carrot);
+
+        return carrot;
+    }
+
+    /**
+     * @param {Phaser.Physics.Arcade.Sprite} player 
+     * @param {Carrot} carrot 
+     */
+    handleCollectCarrot(player, carrot) {
+        this.carrots.killAndHide(carrot);
+        this.physics.world.disableBody(carrot.body);
+
+        this.carrotsCollected++;
+    }
 }
 
 // tips: the infinite scroll will stop work with this logic 
 // if we change the height or the number of platforms
 // exercise: fix it
+
+/// try to comment the line : 
+/// carrot.body.setSize(carrot.width, carrot.height);
+
+// try to avoid carrots that were not taken to stay existing
