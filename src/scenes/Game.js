@@ -14,6 +14,9 @@ export default class Game extends Phaser.Scene {
     /** @type {Phaser.Types.Input.Keyboard.CursorKeys} */
     cursors;
 
+    /** @type {Phaser.GameObjects.GameObjectFactory.text} */
+    carrotsCollectedText;
+
     carrotsCollected = 0;
 
     constructor() {
@@ -80,7 +83,7 @@ export default class Game extends Phaser.Scene {
 
         // Carrot counting text
         const style = { color: '#000', fontSize: 24 };
-        this.add.text(240, 10, 'Carrots: 0', style)
+        this.carrotsCollectedText = this.add.text(240, 10, 'Carrots: 0', style)
             .setScrollFactor(0)
             .setOrigin(0.5, 0)
     }
@@ -166,6 +169,9 @@ export default class Game extends Phaser.Scene {
         this.physics.world.disableBody(carrot.body);
 
         this.carrotsCollected++;
+
+        const value = `Carrots: ${this.carrotsCollected}`;
+        this.carrotsCollectedText.text = value;
     }
 }
 
